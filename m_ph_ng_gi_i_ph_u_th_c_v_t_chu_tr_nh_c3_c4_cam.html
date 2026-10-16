@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioSim VN - Giải Phẫu Thực Vật & Chu Trình C3, C4, CAM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        bio: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            800: '#065f46',
+                            900: '#064e3b',
+                            950: '#022c22'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #071310;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(13, 31, 26, 0.82);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(52, 211, 153, 0.18);
+        }
+        .tissue-layer {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .tissue-layer:hover {
+            filter: brightness(1.25) drop-shadow(0 0 8px rgba(52, 211, 153, 0.5));
+        }
+        .tissue-layer.selected-tissue {
+            stroke: #34d399 !important;
+            stroke-width: 3px !important;
+            filter: brightness(1.3) drop-shadow(0 0 12px rgba(16, 185, 129, 0.7));
+        }
+        /* Custom range slider */
+        input[type=range] {
+            accent-color: #10b981;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #071310;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #115e59;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.04); }
+        }
+        .animate-glow {
+            animation: pulseGlow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-emerald-500 selection:text-slate-950">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-emerald-500/20 px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-seedling text-slate-950 text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg md:text-xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-300 via-teal-200 to-lime-300 bg-clip-text text-transparent">
+                            BioSim Thực Vật Học
+                        </h1>
+                        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            C3 · C4 · CAM
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400">Mô phỏng Giải phẫu Lá & Cơ chế Sinh lý Quang hợp Tương tác</p>
+                </div>
+            </div>
+
+            <!-- Main Navigation Tabs -->
+            <nav class="flex flex-wrap items-center justify-center gap-1.5 bg-slate-900/90 p-1.5 rounded-xl border border-emerald-500/20 w-full md:w-auto">
+                <button onclick="switchMainTab('simulator')" id="tab-btn-simulator" class="main-tab-btn flex-1 md:flex-initial px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-emerald-500 text-slate-950 shadow-md">
+                    <i class="fa-solid fa-atom"></i>
+                    <span>Mô Phỏng Chu Trình</span>
+                </button>
+                <button onclick="switchMainTab('anatomy')" id="tab-btn-anatomy" class="main-tab-btn flex-1 md:flex-initial px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60">
+                    <i class="fa-solid fa-microscope"></i>
+                    <span>Giải Phẫu Lá (Kranz)</span>
+                </button>
+                <button onclick="switchMainTab('compare')" id="tab-btn-compare" class="main-tab-btn flex-1 md:flex-initial px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                    <span>So Sánh & Đồ Thị</span>
+                </button>
+                <button onclick="switchMainTab('quiz')" id="tab-btn-quiz" class="main-tab-btn flex-1 md:flex-initial px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span>Trắc Nghiệm</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
+
+        <!-- ==================== TAB 1: PATHWAY SIMULATOR ==================== -->
+        <section id="tab-simulator" class="space-y-6">
+            <!-- Top Pathway Selection & Environment Bar -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <!-- Plant Group Selector -->
+                <div class="lg:col-span-5 glass-panel rounded-2xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-leaf"></i> Chọn Nhóm Thực Vật
+                        </span>
+                        <span id="plant-example-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                            VD: Lúa, Lúa mì, Đậu, Khoai tây
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <button onclick="setPathway('C3')" id="btn-pathway-C3" class="pathway-btn p-3 rounded-xl border-2 border-emerald-400 bg-emerald-500/20 text-left transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="text-lg font-extrabold text-white">C3</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-300 font-bold">Phổ biến</span>
+                            </div>
+                            <p class="text-[11px] text-slate-300 mt-1 leading-tight">Cố định CO₂ trực tiếp qua Rubisco</p>
+                        </button>
+                        <button onclick="setPathway('C4')" id="btn-pathway-C4" class="pathway-btn p-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:border-emerald-500/40 text-left transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="text-lg font-extrabold text-amber-300">C4</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold">Không gian</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-1 leading-tight">Mô giậu & Tế bào bao bó mạch</p>
+                        </button>
+                        <button onclick="setPathway('CAM')" id="btn-pathway-CAM" class="pathway-btn p-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:border-emerald-500/40 text-left transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="text-lg font-extrabold text-cyan-300">CAM</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 font-bold">Thời gian</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-1 leading-tight">Mở khí khổng ban đêm, đóng ban ngày</p>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-7 glass-panel rounded-2xl p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-sliders"></i> Điều Kiện Môi Trường Mô Phỏng
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="setPresetEnv('optimal')" class="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/50 transition">
+                                <i class="fa-solid fa-check mr-1"></i>Ôn hòa (25°C)
+                            </button>
+                            <button onclick="setPresetEnv('hot_dry')" class="text-[11px] px-2.5 py-1 rounded-lg bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-700/50 transition">
+                                <i class="fa-solid fa-fire mr-1"></i>Nóng & Khô hạn (40°C)
+                            </button>
+                            <button onclick="toggleDayNight()" id="btn-day-night" class="text-xs font-bold px-3 py-1 rounded-lg bg-amber-400 text-slate-950 flex items-center gap-1.5 shadow transition">
+                                <i class="fa-solid fa-sun" id="icon-day-night"></i>
+                                <span id="label-day-night">Ban Ngày</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <!-- Temperature Slider -->
+                        <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400"><i class="fa-solid fa-temperature-half text-rose-400 mr-1"></i>Nhiệt độ:</span>
+                                <span id="val-temp" class="font-bold text-rose-300">28°C</span>
+                            </div>
+                            <input type="range" id="slider-temp" min="15" max="45" value="28" oninput="updateEnvironment()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                                <span>15°C (Mát)</span>
+                                <span>30°C</span>
+                                <span>45°C (Nắng gắt)</span>
+                            </div>
+                        </div>
+
+                        <!-- Light Intensity Slider -->
+                        <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400"><i class="fa-solid fa-sun text-amber-400 mr-1"></i>Ánh sáng (PAR):</span>
+                                <span id="val-light" class="font-bold text-amber-300">75%</span>
+                            </div>
+                            <input type="range" id="slider-light" min="0" max="100" value="75" oninput="updateEnvironment()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                                <span>0% (Tối)</span>
+                                <span>50%</span>
+                                <span>100% (Gắt)</span>
+                            </div>
+                        </div>
+
+                        <!-- Humidity / Water Slider -->
+                        <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400"><i class="fa-solid fa-droplet text-sky-400 mr-1"></i>Độ ẩm đất:</span>
+                                <span id="val-water" class="font-bold text-sky-300">80%</span>
+                            </div>
+                            <input type="range" id="slider-water" min="10" max="100" value="80" oninput="updateEnvironment()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                                <span>10% (Hạn)</span>
+                                <span>55%</span>
+                                <span>100% (Đủ ẩm)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Left 8 Cols: Interactive Biochemical & Cellular Canvas -->
+                <div class="lg:col-span-8 glass-panel rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                        <div>
+                            <h2 id="sim-canvas-title" class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                                Chu Trình C3 (Chu Trình Calvin - Benson)
+                            </h2>
+                            <p id="sim-canvas-subtitle" class="text-xs text-slate-400">
+                                Toàn bộ quá trình cố định CO₂ và chu trình Calvin đều diễn ra trong lục lạp của Tế bào mô giậu.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="togglePauseSim()" id="btn-pause-sim" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5">
+                                <i class="fa-solid fa-pause" id="icon-pause-sim"></i>
+                                <span id="text-pause-sim">Tạm dừng</span>
+                            </button>
+                            <button onclick="stepSimSpeed()" id="btn-speed-sim" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-300 border border-slate-700">
+                                Tốc độ: 1x
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Responsive Simulation Canvas Wrapper -->
+                    <div class="relative w-full aspect-[16/11] sm:aspect-[16/10] bg-slate-950 rounded-xl border border-emerald-500/20 overflow-hidden shadow-inner">
+                        <canvas id="pathwayCanvas" class="w-full h-full block"></canvas>
+
+                        <!-- Floating Legend Overlay -->
+                        <div class="absolute bottom-2.5 left-2.5 right-2.5 flex flex-wrap items-center justify-between gap-2 bg-slate-950/85 backdrop-blur-md px-3 py-2 rounded-lg border border-slate-800 text-[11px]">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span> CO₂</span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> O₂ (Hô hấp sáng)</span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span> Axit 4C (OAA/Malate)</span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span> Glucose (C₆H₁₂O₆)</span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block"></span> Pyruvate / PEP (3C)</span>
+                            </div>
+                            <span class="text-slate-400 hidden sm:inline"><i class="fa-regular fa-hand-pointer mr-1 text-emerald-400"></i>Nhấp vào các vùng tế bào để xem chi tiết</span>
+                        </div>
+                    </div>
+
+                    <!-- Alert Banner for Photorespiration or Night Mode -->
+                    <div id="sim-status-banner" class="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/30 flex items-start gap-3 text-xs">
+                        <i class="fa-solid fa-circle-info text-emerald-400 text-base mt-0.5"></i>
+                        <div id="sim-status-text" class="text-slate-200 leading-relaxed">
+                            <strong>Trạng thái bình thường:</strong> Khí khổng mở rộng, CO₂ khuếch tán vào lục lạp mô giậu. Enzyme <strong>Rubisco</strong> xúc tác gắn CO₂ vào RuBP (5C) tạo hợp chất 3C (PGA) đi vào chu trình Calvin tổng hợp chất hữu cơ.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4 space-y-4">
+                    <!-- Real-time Physiological Metrics -->
+                    <div class="glass-panel rounded-2xl p-4 space-y-3.5">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center justify-between">
+                            <span><i class="fa-solid fa-chart-line mr-1.5"></i>Chỉ Số Sinh Lý Thời Gian Thực</span>
+                            <span id="stomata-badge" class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                Khí khổng: Mở 85%
+                            </span>
+                        </h3>
+
+                        <!-- Gauge 1: Photosynthetic Rate -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-300">Cường độ Quang hợp (Tổng hợp C₆H₁₂O₆)</span>
+                                <span id="metric-photo-val" class="font-bold text-emerald-400">82%</span>
+                            </div>
+                            <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                                <div id="metric-photo-bar" class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-300" style="width: 82%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Gauge 2: Photorespiration (Hô hấp sáng) -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-300">Hô hấp sáng (Lãng phí Carbon do O₂)</span>
+                                <span id="metric-resp-val" class="font-bold text-rose-400">12%</span>
+                            </div>
+                            <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                                <div id="metric-resp-bar" class="h-full bg-gradient-to-r from-rose-600 to-rose-400 transition-all duration-300" style="width: 12%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Gauge 3: Transpiration Water Loss -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-300">Tốc độ mất nước qua khí khổng</span>
+                                <span id="metric-water-val" class="font-bold text-sky-400">45%</span>
+                            </div>
+                            <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                                <div id="metric-water-bar" class="h-full bg-gradient-to-r from-sky-600 to-sky-400 transition-all duration-300" style="width: 45%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Key Biochemical Facts Card -->
+                        <div class="pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-xs">
+                            <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+                                <span class="text-[10px] text-slate-400 block">Chất nhận CO₂ đầu tiên</span>
+                                <span id="fact-acceptor" class="font-bold text-white text-sm">RuBP (Hợp chất 5C)</span>
+                            </div>
+                            <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+                                <span class="text-[10px] text-slate-400 block">Sản phẩm ổn định đầu tiên</span>
+                                <span id="fact-product" class="font-bold text-emerald-300 text-sm">APG / PGA (3C)</span>
+                            </div>
+                            <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+                                <span class="text-[10px] text-slate-400 block">Enzyme cố định CO₂</span>
+                                <span id="fact-enzyme" class="font-bold text-amber-300 text-sm">Rubisco</span>
+                            </div>
+                            <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+                                <span class="text-[10px] text-slate-400 block">Không gian & Thời gian</span>
+                                <span id="fact-spatiotemporal" class="font-bold text-cyan-300 text-sm">1 Tế bào · Ban ngày</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step-by-Step Pathway Inspector -->
+                    <div class="glass-panel rounded-2xl p-4">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-3 flex items-center gap-1.5">
+                            <i class="fa-solid fa-list-check"></i> Các Giai Đoạn Sinh Hóa Chính
+                        </h3>
+                        <div id="pathway-steps-list" class="space-y-2.5 text-xs">
+                            <!-- Dynamically populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: LEAF ANATOMY EXPLORER ==================== -->
+        <section id="tab-anatomy" class="hidden space-y-6">
+            <div class="glass-panel rounded-2xl p-5">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-microscope text-emerald-400"></i>
+                            Mô Phỏng Giải Phẫu Hiển Vi Lát Cắt Ngang Lá
+                        </h2>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-1">
+                            Nhấp trực tiếp vào từng lớp mô trên lát cắt ngang lá để khám phá cấu tạo giải phẫu thích nghi với chu trình C3, C4 (Giải phẫu Kranz) và CAM.
+                        </p>
+                    </div>
+                    <!-- Anatomy Leaf Type Switcher -->
+                    <div class="flex items-center gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800 self-start">
+                        <button onclick="setAnatomyType('C3')" id="anat-btn-C3" class="anat-type-btn px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 transition">
+                            Lá Cây C3 (Điển hình)
+                        </button>
+                        <button onclick="setAnatomyType('C4')" id="anat-btn-C4" class="anat-type-btn px-3.5 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition">
+                            Lá Cây C4 (Giải phẫu Kranz)
+                        </button>
+                        <button onclick="setAnatomyType('CAM')" id="anat-btn-CAM" class="anat-type-btn px-3.5 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition">
+                            Lá Cây CAM (Mọng nước)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Anatomy Interactive SVG + Inspector Split View -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5 items-start">
+                    <!-- Interactive Cross-section SVG -->
+                    <div class="lg:col-span-7 bg-slate-950 rounded-2xl p-4 border border-emerald-500/20 relative">
+                        <div class="flex items-center justify-between mb-2">
+                            <span id="anatomy-svg-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                Lát cắt ngang: Lá Thực Vật C3 (Lúa mì / Đậu)
+                            </span>
+                            <span class="text-[11px] text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass-plus text-emerald-400 mr-1"></i>Độ phóng đại: 400x
+                            </span>
+                        </div>
+
+                        <!-- Dynamic SVG Container rendered cleanly for C3/C4/CAM -->
+                        <div id="anatomy-svg-container" class="w-full overflow-hidden rounded-xl bg-[#040d0a] border border-slate-800/80 flex items-center justify-center">
+                            <!-- Injected via JS renderAnatomySVG() -->
+                        </div>
+
+                        <!-- Tissue Quick-Select Pills -->
+                        <div class="mt-3 flex flex-wrap gap-1.5">
+                            <button onclick="selectTissue('cuticle')" class="tissue-pill text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700">1. Lớp Cutin</button>
+                            <button onclick="selectTissue('epidermis')" class="tissue-pill text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700">2. Biểu bì</button>
+                            <button onclick="selectTissue('palisade')" class="tissue-pill text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700">3. Mô giậu (Mesophyll)</button>
+                            <button onclick="selectTissue('bundle_sheath')" class="tissue-pill text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/50 font-semibold">4. Tế bào bao bó mạch ★</button>
+                            <button onclick="selectTissue('vascular')" class="tissue-pill text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700">5. Bó mạch (Gỗ & Rây)</button>
+                            <button onclick="selectTissue('stomata')" class="tissue-pill text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700">6. Khí khổng & Khoang khí</button>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-5 space-y-4">
+                        <div class="bg-slate-900/90 rounded-2xl p-5 border border-emerald-500/30 shadow-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <span id="tissue-tag" class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                                    Mô Cơ Bản · Quang Hợp
+                                </span>
+                                <span class="text-xs text-slate-400">Chi tiết cấu trúc giải phẫu</span>
+                            </div>
+                            <h3 id="tissue-title" class="text-xl font-extrabold text-white mb-2">
+                                Tế Bào Bao Bó Mạch (Bundle Sheath)
+                            </h3>
+                            <p id="tissue-desc" class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                                Lớp tế bào bao quanh mạch dẫn (Xylem và Phloem). Đây là cấu trúc giải phẫu quan trọng nhất để phân biệt lá cây C3 và lá cây C4 (Giải phẫu Kranz).
+                            </p>
+
+                            <!-- Comparison across C3, C4, CAM for the selected tissue -->
+                            <div class="space-y-2.5 border-t border-slate-800 pt-3">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                    Sự biến đổi cấu trúc này ở 3 nhóm thực vật:
+                                </h4>
+                                <div class="p-3 rounded-xl bg-slate-950/90 border-l-4 border-emerald-400">
+                                    <span class="text-xs font-bold text-emerald-300 block">Ở Thực vật C3:</span>
+                                    <p id="tissue-c3-diff" class="text-xs text-slate-300 mt-0.5"></p>
+                                </div>
+                                <div class="p-3 rounded-xl bg-slate-950/90 border-l-4 border-amber-400">
+                                    <span class="text-xs font-bold text-amber-300 block">Ở Thực vật C4 (Giải phẫu Kranz):</span>
+                                    <p id="tissue-c4-diff" class="text-xs text-slate-300 mt-0.5"></p>
+                                </div>
+                                <div class="p-3 rounded-xl bg-slate-950/90 border-l-4 border-cyan-400">
+                                    <span class="text-xs font-bold text-cyan-300 block">Ở Thực vật CAM (Mọng nước):</span>
+                                    <p id="tissue-cam-diff" class="text-xs text-slate-300 mt-0.5"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Key Histological Summary Box -->
+                        <div class="glass-panel rounded-2xl p-4 border border-amber-500/30 bg-amber-950/10">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5 mb-1.5">
+                                <i class="fa-solid fa-star"></i> Điểm Nhấn Sinh Học: Giải Phẫu Kranz Là Gì?
+                            </h4>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                <strong>"Kranz"</strong> (tiếng Đức nghĩa là vòng hoa) mô tả cấu trúc lá đặc trưng của thực vật C4: các <strong>tế bào bao bó mạch</strong> rất phát triển, vách dày không thấm khí, chứa nhiều lục lạp lớn (không có hạt grana hoặc ít grana) xếp thành vòng đồng tâm bao quanh bó mạch, bên ngoài là vòng <strong>tế bào mô giậu</strong> xếp sát nhau giúp bơm tập trung CO₂ gấp 10-20 lần, triệt tiêu hoàn toàn hô hấp sáng.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: COMPARISON MATRIX & CHARTS ==================== -->
+        <section id="tab-compare" class="hidden space-y-6">
+            <!-- Interactive Comparison Table -->
+            <div class="glass-panel rounded-2xl p-5 overflow-hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-table-columns text-emerald-400"></i>
+                            Bảng So Sánh Toàn Diện Thực Vật C3, C4 và CAM
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Tổng hợp chuẩn kiến thức Sinh học THPT Quốc gia & Sinh lý Thực vật đại cương</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-800">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-200 border-b border-slate-800">
+                                <th class="p-3.5 font-bold w-1/4">Tiêu chí so sánh</th>
+                                <th class="p-3.5 font-bold text-emerald-400 w-1/4 border-l border-slate-800">Thực vật C3</th>
+                                <th class="p-3.5 font-bold text-amber-300 w-1/4 border-l border-slate-800">Thực vật C4</th>
+                                <th class="p-3.5 font-bold text-cyan-300 w-1/4 border-l border-slate-800">Thực vật CAM</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/80 bg-slate-950/60">
+                            <tr class="hover:bg-slate-900/50">
+                                <td class="p-3.5 font-semibold text-slate-300">Đại diện điển hình</td>
+                                <td class="p-3.5 border-l border-slate-800">Lúa, lúa mì, khoai tây, đậu, rau xanh, cây gỗ rừng (~85% loài thực vật)</td>
+                                <td class="p-3.5 border-l border-slate-800">Ngô (bắp), mía, cao lương, cỏ lồng vực, cỏ gấu, rau dền</td>
+                                <td class="p-3.5 border-l border-slate-800">Dứa (thơm), xương rồng, thanh long, thuốc bỏng, nha đam, phong lan</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/50">
+                                <td class="p-3.5 font-semibold text-slate-300">Giải phẫu lá</td>
+                                <td class="p-3.5 border-l border-slate-800">Bình thường: Mô giậu & mô khuyết phân hóa rõ; tế bào bao bó mạch nhỏ, ít lục lạp</td>
+                                <td class="p-3.5 border-l border-slate-800 font-medium text-amber-200">Giải phẫu Kranz: Tế bào mô giậu và tế bào bao bó mạch đều chứa nhiều lục lạp lớn</td>
+                                <td class="p-3.5 border-l border-slate-800">Lá mọng nước, lớp cutin rất dày, tế bào thịt lá có không bào trung tâm cực lớn</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/50">
+                                <td class="p-3.5 font-semibold text-slate-300">Chất nhận CO₂ đầu tiên</td>
+                                <td class="p-3.5 border-l border-slate-800"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">RuBP</span> (Ribulose-1,5-bisphosphate - 5C)</td>
+                                <td class="p-3.5 border-l border-slate-800"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">PEP</span> (Phosphoenolpyruvate - 3C)</td>
+                                <td class="p-3.5 border-l border-slate-800"><span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">PEP</span> (Phosphoenolpyruvate - 3C)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/50">
+                                <td class="p-3.5 font-semibold text-slate-300">Enzyme cố định CO₂</td>
+                                <td class="p-3.5 border-l border-slate-800">Chỉ có <strong>Rubisco</strong></td>
+                                <td class="p-3.5 border-l border-slate-800"><strong>PEP carboxylase</strong> (Mô giậu) & <strong>Rubisco</strong> (Bao bó mạch)</td>
+                                <td class="p-3.5 border-l border-slate-800"><strong>PEP carboxylase</strong> (Ban đêm) & <strong>Rubisco</strong> (Ban ngày)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/50">
+                                <td class="p-3.5 font-semibold text-slate-300">Sản phẩm cố định đầu tiên</td>
+                                <td class="p-3.5 border-l border-slate-800">Hợp chất 3C: <strong>APG / PGA</strong> (Axit phosphoglyceric)</td>
+                                <td class="p-3.5 border-l border-slate-800">Hợp chất 4C: <strong>AOA / OAA</strong> (Axit oxaloacetic) → Malate (4C)</td>
+                                <td class="p-3.5 border-l border-slate-800">Hợp chất 4C: <strong>AOA / OAA</strong> → Axit malic (4C) tích trữ ở không bào</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/50">
+                                <td class="p-3.5 font-semibold text-slate-300">Không gian & Thời gian</td>
+                                <td class="p-3.5 border-l border-slate-800">1 loại tế bào (Mô giậu) · Chỉ diễn ra <strong>Ban ngày</strong></td>
+                                <td class="p-3.5 border-l border-slate-800"><strong>Phân tách không gian:</strong> 2 loại tế bào (Mô giậu + Bao bó mạch) · <strong>Ban ngày</strong></td>
+                                <td class="p-3.5 border-l border-slate-800"><strong>Phân tách thời gian:</strong> 1 loại tế bào (Mô giậu) · Cố định CO₂ <strong>Đêm</strong>, Calvin <strong>Ngày</strong></td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/50">
+                                <td class="p-3.5 font-semibold text-slate-300">Trạng thái Khí khổng</td>
+                                <td class="p-3.5 border-l border-slate-800">Mở ban ngày, đóng ban đêm (khép bớt khi nắng gắt)</td>
+                                <td class="p-3.5 border-l border-slate-800">Mở ban ngày (độ mở vừa phải, tiết kiệm nước hơn C3)</td>
+                                <td class="p-3.5 border-l border-slate-800 font-semibold text-cyan-300">Đóng hoàn toàn ban ngày, chỉ mở vào ban đêm</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/50">
+                                <td class="p-3.5 font-semibold text-slate-300">Hô hấp sáng</td>
+                                <td class="p-3.5 border-l border-slate-800 text-rose-400 font-semibold">Mạnh (gây hao hụt 25% - 50% sản phẩm quang hợp khi trời nóng)</td>
+                                <td class="p-3.5 border-l border-slate-800 text-emerald-400 font-semibold">Không có (hoặc cực kỳ thấp nhờ bơm CO₂ vào bao bó mạch)</td>
+                                <td class="p-3.5 border-l border-slate-800 text-emerald-400 font-semibold">Rất thấp (do nồng độ CO₂ nội bào cao vào ban ngày)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/50">
+                                <td class="p-3.5 font-semibold text-slate-300">Nhiệt độ tối ưu & Năng suất</td>
+                                <td class="p-3.5 border-l border-slate-800">15°C – 25°C · Năng suất sinh học trung bình</td>
+                                <td class="p-3.5 border-l border-slate-800">30°C – 40°C · Năng suất sinh học <strong>Cao nhất</strong></td>
+                                <td class="p-3.5 border-l border-slate-800">35°C – 45°C · Năng suất <strong>Thấp</strong> (ưu tiên sinh tồn chống hạn)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-5">
+                <h3 class="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-area text-emerald-400"></i>
+                    Đồ Thị Tương Quan Cường Độ Quang Hợp Theo Nhiệt Độ & Ánh Sáng
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">
+                    Di chuột trên đồ thị để so sánh hiệu suất quang hợp của thực vật C3, C4 và CAM khi nhiệt độ môi trường tăng từ 10°C đến 45°C.
+                </p>
+                <div class="w-full h-72 bg-slate-950 rounded-xl border border-slate-800 p-3 relative">
+                    <canvas id="comparisonChartCanvas" class="w-full h-full block"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: INTERACTIVE QUIZ ==================== -->
+        <section id="tab-quiz" class="hidden space-y-6">
+            <div class="max-w-3xl mx-auto glass-panel rounded-2xl p-6">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Luyện Tập & Đánh Giá</span>
+                        <h2 class="text-xl font-extrabold text-white mt-0.5">Trắc Nghiệm Giải Phẫu Lá & Quang Hợp C3, C4, CAM</h2>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-slate-400 block">Điểm số hiện tại</span>
+                        <span id="quiz-score-badge" class="text-lg font-extrabold text-emerald-400">0 / 6</span>
+                    </div>
+                </div>
+
+                <div id="quiz-container" class="space-y-4">
+                    <!-- Populated via JS -->
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+                    <button onclick="resetQuiz()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition">
+                        <i class="fa-solid fa-rotate-right mr-1.5"></i>Làm lại bộ câu hỏi
+                    </button>
+                    <span class="text-xs text-slate-400">Chọn đáp án để xem giải thích sinh học chi tiết</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-emerald-500/15 py-4 px-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>BioSim Thực Vật Học — Mô phỏng Giải phẫu Kranz & Chu trình Quang hợp C3, C4, CAM</span>
+            <span class="text-emerald-400/80">Thiết kế trực quan phục vụ học tập & giảng dạy Sinh học</span>
+        </div>
+    </footer>
+
+    <script>
+        const state = {
+            mainTab: 'simulator',
+            pathway: 'C3',          // 'C3' | 'C4' | 'CAM'
+            anatomyType: 'C3',      // 'C3' | 'C4' | 'CAM'
+            selectedTissue: 'bundle_sheath',
+            isDay: true,
+            temp: 28,               // °C (15 - 45)
+            light: 75,              // % (0 - 100)
+            water: 80,              // % (10 - 100)
+            paused: false,
+            speed: 1,
+            timeTick: 0,
+            calvinAngle: 0,
+            particles: [],
+            stomataOpening: 0.85,   // 0.0 to 1.0
+            photoRate: 82,
+            photoRespRate: 12,
+            waterLossRate: 45,
+            malicAcidStorage: 0.35  // For CAM vacuole level
+        };
+
+        const PATHWAY_DATA = {
+            C3: {
+                title: 'Chu Trình C3 (Chu Trình Calvin - Benson)',
+                subtitle: 'Cố định CO₂ và chu trình Calvin diễn ra ngay trong lục lạp của Tế bào mô giậu (Mesophyll).',
+                examples: 'VD: Lúa, Lúa mì, Đậu, Khoai tây, Cây gỗ',
+                acceptor: 'RuBP (Hợp chất 5C)',
+                product: 'APG / PGA (3C)',
+                enzyme: 'Rubisco',
+                spatiotemporal: '1 Tế bào · Ban ngày',
+                steps: [
+                    { badge: 'Giai đoạn 1', title: 'Cố định CO₂ trực tiếp', desc: 'Khí khổng mở ban ngày. CO₂ đi vào lục lạp mô giậu, được enzyme Rubisco gắn trực tiếp vào RuBP (5C) tạo 2 phân tử APG/PGA (3C).' },
+                    { badge: 'Giai đoạn 2', title: 'Khử APG thành AlPG (G3P)', desc: 'Sử dụng ATP và NADPH từ pha sáng để khử APG (3C) thành đường AlPG/G3P (3C) tổng hợp nên Glucose (C₆H₁₂O₆).' },
+                    { badge: 'Giai đoạn 3', title: 'Tái sinh chất nhận RuBP', desc: 'Phần lớn AlPG (3C) tiêu thụ ATP để tái tạo lại RuBP (5C) tiếp tục vòng quay Calvin.' },
+                    { badge: 'Điểm yếu', title: 'Hiện tượng Hô hấp sáng', desc: 'Khi trời nắng nóng (>32°C) và khô hạn, khí khổng khép bớt làm giảm CO₂ và tăng O₂. Rubisco chuyển sang gắn với O₂ gây lãng phí tới 50% carbon!' }
+                ]
+            },
+            C4: {
+                title: 'Chu Trình C4 (Chu Trình Hatch - Slack)',
+                subtitle: 'Phân tách KHÔNG GIAN giữa Tế bào mô giậu (cố định CO₂ sơ khởi) và Tế bào bao bó mạch (Chu trình Calvin).',
+                examples: 'VD: Ngô (Bắp), Mía, Cao lương, Cỏ lồng vực',
+                acceptor: 'PEP (Hợp chất 3C)',
+                product: 'AOA / OAA (Hợp chất 4C)',
+                enzyme: 'PEP carboxylase + Rubisco',
+                spatiotemporal: '2 Tế bào · Ban ngày',
+                steps: [
+                    { badge: 'Tại Mô Giậu', title: 'Cố định CO₂ lần 1 (Nhờ PEP carboxylase)', desc: 'Enzyme PEP carboxylase có ái lực cực cao với CO₂ (và không gắn với O₂), gắn CO₂ vào PEP (3C) tạo hợp chất 4C là OAA → chuyển hóa thành Malate (4C).' },
+                    { badge: 'Vận chuyển', title: 'Bơm Carbon qua Cầu sinh chất', desc: 'Axit 4C (Malate) di chuyển từ tế bào mô giậu qua cầu sinh chất vào sâu bên trong Tế bào bao bó mạch (Giải phẫu Kranz).' },
+                    { badge: 'Tại Bao Bó Mạch', title: 'Khử Carboxyl & Chu trình Calvin', desc: 'Malate (4C) phân giải giải phóng CO₂ nồng độ cao cho Rubisco thực hiện chu trình Calvin tạo Glucose, hoàn toàn không có Hô hấp sáng.' },
+                    { badge: 'Tái sinh PEP', title: 'Quay vòng Pyruvate (3C)', desc: 'Phân tử Pyruvate (3C) quay trở lại tế bào mô giậu, dùng ATP tái tạo PEP (3C).' }
+                ]
+            },
+            CAM: {
+                title: 'Chu Trình CAM (Crassulacean Acid Metabolism)',
+                subtitle: 'Phân tách THỜI GIAN trong cùng 1 tế bào thịt lá mọng nước: Cố định CO₂ vào Ban Đêm, chạy Calvin vào Ban Ngày.',
+                examples: 'VD: Dứa (Thơm), Xương rồng, Thanh long, Nha đam',
+                acceptor: 'PEP (Hợp chất 3C - Đêm)',
+                product: 'AOA → Axit Malic (4C)',
+                enzyme: 'PEP carboxylase (Đêm) / Rubisco (Ngày)',
+                spatiotemporal: '1 Tế bào · Đêm & Ngày',
+                steps: [
+                    { badge: 'Ban Đêm 🌙', title: 'Mở khí khổng & Cố định CO₂ sơ khởi', desc: 'Khi trời mát vào ban đêm, khí khổng mở. PEP carboxylase gắn CO₂ vào PEP (3C) tạo OAA (4C) rồi chuyển thành Axit Malic (4C).' },
+                    { badge: 'Tích trữ Đêm', title: 'Dự trữ Axit Malic trong Không bào lớn', desc: 'Axit Malic được bơm vào dự trữ trong Không bào trung tâm khổng lồ suốt đêm (làm dịch tế bào lá có vị chua vào sáng sớm).' },
+                    { badge: 'Ban Ngày ☀️', title: 'Đóng kín khí khổng chống mất nước', desc: 'Khi mặt trời mọc, khí khổng đóng hoàn toàn để ngăn thoát hơi nước giữa sa mạc khô nóng.' },
+                    { badge: 'Quang hợp Ngày', title: 'Giải phóng CO₂ nội bào & Chu trình Calvin', desc: 'Axit Malic từ không bào đi ra tế bào chất, phân giải giải phóng CO₂ cung cấp cho lục lạp thực hiện pha sáng + chu trình Calvin tổng hợp Glucose.' }
+                ]
+            }
+        };
+
+        const TISSUE_DATA = {
+            cuticle: {
+                tag: 'Mô Bảo Vệ · Bề Mặt',
+                title: 'Lớp Cutin (Cuticle)',
+                desc: 'Lớp sáp không thấm nước do tế bào biểu bì tiết ra phủ mặt ngoài của lá, giúp hạn chế thoát hơi nước không kiểm soát và phản xạ bớt bức xạ nhiệt mặt trời.',
+                c3: 'Độ dày mỏng đến trung bình, thích nghi với điều kiện khí hậu ôn hòa và đủ ẩm.',
+                c4: 'Độ dày trung bình - khá, giúp lá giữ ẩm tốt dưới ánh nắng nhiệt đới cường độ mạnh.',
+                cam: 'CỰC KỲ DÀY và phủ sáp bóng, ngăn cản tối đa sự bốc hơi nước qua bề mặt lá trong điều kiện sa mạc khô hạn.'
+            },
+            epidermis: {
+                tag: 'Mô Che Chở · Biểu Bì',
+                title: 'Biểu Bì Trên & Biểu Bì Dưới (Epidermis)',
+                desc: 'Gồm một lớp tế bào sống xếp khít nhau, thường không chứa lục lạp (trừ tế bào hạt đậu của khí khổng). Bảo vệ các mô quang hợp bên trong và cho ánh sáng xuyên qua.',
+                c3: 'Tế bào biểu bì vách mỏng, cho ánh sáng khuếch tán dễ dàng vào lớp mô giậu bên dưới.',
+                c4: 'Thường có thêm các tế bào trương nước (Bulliform cells) lớn ở biểu bì trên giúp lá cuộn lại khi hạn hán.',
+                cam: 'Tế bào biểu bì có vách hóa cutin rất dày, liên kết cực kỳ chặt chẽ để giữ nước.'
+            },
+            palisade: {
+                tag: 'Mô Cơ Bản · Đồng Hóa',
+                title: 'Tế Bào Thịt Lá / Mô Giậu (Mesophyll Cells)',
+                desc: 'Nơi chứa nhiều lục lạp thực hiện hấp thụ năng lượng ánh sáng và cố định CO₂ từ khoảng gian bào.',
+                c3: 'Phân hóa rõ rệt thành Mô giậu (xếp sát nhau ở mặt trên, giàu lục lạp chạy chu trình Calvin) và Mô khuyết (xếp thưa ở mặt dưới).',
+                c4: 'Không phân hóa mô giậu - mô khuyết tách biệt mà xếp thành vòng đồng tâm bao quanh tế bào bao bó mạch (Giải phẫu Kranz). Chỉ chứa PEP carboxylase, KHÔNG có Rubisco.',
+                cam: 'Các tế bào thịt lá có kích thước rất lớn, tròn đều, chứa Không bào trung tâm chiếm tới 90% thể tích tế bào để tích trữ nước và Axit Malic ban đêm.'
+            },
+            bundle_sheath: {
+                tag: 'Cấu Trúc Quyết Định · Bao Bó Mạch',
+                title: 'Tế Bào Bao Bó Mạch (Bundle Sheath Cells)',
+                desc: 'Vòng tế bào bao bọc xung quanh bó mạch dẫn của gân lá. Đây là tiêu chuẩn vàng trong giải phẫu thực vật để nhận diện cây C4.',
+                c3: 'Tế bào nhỏ, vách mỏng, hầu như KHÔNG có lục lạp hoặc rất ít lục lạp. Không tham gia đáng kể vào quang hợp.',
+                c4: 'RẤT PHÁT TRIỂN (Giải phẫu Kranz): Tế bào to, vách dày chứa suberin ngăn O₂ xâm nhập và ngăn CO₂ thoát ra. Chứa đầy lục lạp lớn và enzyme Rubisco để chuyên trách chu trình Calvin!',
+                cam: 'Tế bào nhỏ, cấu tạo tương tự thực vật C3, không có cấu trúc Kranz vì CAM phân tách theo thời gian trong cùng 1 tế bào thịt lá.'
+            },
+            vascular: {
+                tag: 'Mô Dẫn · Bó Mạch',
+                title: 'Bó Mạch Dẫn: Mạch Gỗ (Xylem) & Mạch Rây (Phloem)',
+                desc: 'Hệ thống ống dẫn truyền nội bộ của lá: Mạch gỗ (Xylem) vận chuyển nước và ion khoáng từ rễ lên; Mạch rây (Phloem) vận chuyển đường Sucrose/Glucose từ lá đi nuôi cây.',
+                c3: 'Khoảng cách giữa các bó mạch (gân lá) khá xa nhau, cách nhau bởi nhiều tế bào thịt lá.',
+                c4: 'Mật độ gân lá và bó mạch DÀY ĐẶC hơn hẳn C3, giúp rút ngắn quãng đường vận chuyển chất hữu cơ và nước.',
+                cam: 'Hệ thống bó mạch phân bố trong mô thịt lá mọng nước, tốc độ dòng mạch gỗ vào ban ngày rất thấp do khí khổng đóng.'
+            },
+            stomata: {
+                tag: 'Trao Đổi Khí & Thoát Hơi Nước',
+                title: 'Khí Khổng (Stomata) & Khoang Chứa Khí',
+                desc: 'Gồm 2 tế bào hình hạt đậu (hoặc hình quả tạ ở lớp Hành/cây C4 như Ngô, Mía) đóng mở linh hoạt để điều tiết dòng CO₂ đi vào và hơi nước, O₂ đi ra.',
+                c3: 'Mở rộng vào ban ngày, đóng vào ban đêm. Khi nhiệt độ cao và khô hạn sẽ khép bớt, vô tình gây ra Hô hấp sáng.',
+                c4: 'Mở vào ban ngày nhưng chỉ cần độ mở nhỏ vẫn hút đủ CO₂ nhờ bơm PEP carboxylase, giúp tiết kiệm nước gấp 2 lần C3.',
+                cam: 'Đạo ngược nhịp sinh học: ĐÓNG KÍN vào ban ngày nắng gắt để giữ nước, chỉ MỞ vào ban đêm mát mẻ để thu nhận CO₂.'
+            }
+        };
+
+        const QUIZ_QUESTIONS = [
+            {
+                q: 'Câu 1: Điểm khác biệt cốt lõi về giải phẫu lá của thực vật C4 (như Ngô, Mía) so với thực vật C3 là gì?',
+                options: [
+                    'Lá cây C4 không có khí khổng ở biểu bì dưới',
+                    'Lá cây C4 có cấu trúc Kranz với lớp tế bào bao bó mạch rất phát triển, chứa nhiều lục lạp lớn',
+                    'Lá cây C4 có không bào trung tâm chiếm 95% thể tích tế bào để dự trữ axit malic ban đêm',
+                    'Lá cây C4 chỉ thực hiện quang hợp ở tế bào biểu bì trên'
+                ],
+                correct: 1,
+                explanation: 'Thực vật C4 sở hữu "Giải phẫu Kranz": tế bào bao bó mạch to, vách dày, chứa nhiều lục lạp và enzyme Rubisco để thực hiện chu trình Calvin tách biệt hoàn toàn với không khí bên ngoài.'
+            },
+            {
+                q: 'Câu 2: Vì sao thực vật C3 (như lúa, đậu) bị giảm mạnh năng suất khi gặp thời tiết nắng nóng kéo dài (>35°C) và khô hạn?',
+                options: [
+                    'Vì enzyme PEP carboxylase bị biến tính ở 35°C',
+                    'Vì khí khổng khép lại làm giảm CO₂ và tăng O₂ nội bào, khiến Rubisco xúc tác phản ứng Hô hấp sáng gây lãng phí carbon',
+                    'Vì cây C3 chỉ mở khí khổng vào ban đêm',
+                    'Vì tế bào bao bó mạch của cây C3 bị vỡ vách cellulose'
+                ],
+                correct: 1,
+                explanation: 'Khi nắng nóng, cây C3 khép bớt khí khổng để giảm mất nước → nồng độ CO₂ trong gian bào giảm mạnh trong khi O₂ từ pha sáng tích tụ cao → Rubisco gắn với O₂ gây Hô hấp sáng (tiêu hao tới 50% sản phẩm quang hợp).'
+            },
+            {
+                q: 'Câu 3: Ở thực vật CAM (Dứa, Xương rồng, Thanh long), quá trình cố định CO₂ đầu tiên và chu trình Calvin diễn ra như thế nào?',
+                options: [
+                    'Cả hai giai đoạn đều diễn ra vào ban đêm trong tế bào bao bó mạch',
+                    'Cố định CO₂ diễn ra ở mô giậu ban ngày, chu trình Calvin ở bao bó mạch ban đêm',
+                    'Cùng diễn ra trong tế bào thịt lá nhưng phân tách thời gian: Cố định CO₂ vào ban đêm, chu trình Calvin vào ban ngày',
+                    'Cả hai giai đoạn đều diễn ra vào ban ngày khi khí khổng mở cực đại'
+                ],
+                correct: 2,
+                explanation: 'Thực vật CAM thích nghi với sa mạc khô hạn bằng cách mở khí khổng ban đêm để cố định CO₂ (nhờ PEP carboxylase) tích trữ dưới dạng Axit Malic trong không bào; ban ngày đóng kín khí khổng và giải phóng CO₂ từ Axit Malic để chạy chu trình Calvin.'
+            },
+            {
+                q: 'Câu 4: Chất nhận CO₂ đầu tiên và sản phẩm ổn định đầu tiên trong chu trình C4 lần lượt là gì?',
+                options: [
+                    'RuBP (5C) và APG (3C)',
+                    'PEP (3C) và AOA / OAA (Hợp chất 4 carbon)',
+                    'Axit Malic (4C) và Glucose (6C)',
+                    'Pyruvate (3C) và RuBP (5C)'
+                ],
+                correct: 1,
+                explanation: 'Tại tế bào mô giậu của cây C4, chất nhận CO₂ đầu tiên là PEP (Phosphoenolpyruvate - 3C) dưới sự xúc tác của PEP carboxylase tạo ra sản phẩm đầu tiên có 4 carbon là AOA (Axit oxaloacetic).'
+            },
+            {
+                q: 'Câu 5: Vào lúc sáng sớm tinh mơ, nếu nếm thử lá của cây thuốc bỏng hoặc dứa (thực vật CAM), ta thấy có vị chua rõ rệt nhưng đến chiều tối thì vị chua giảm hẳn. Nguyên nhân là gì?',
+                options: [
+                    'Do ban đêm cây tích trữ nhiều Axit Malic (4C) trong không bào, ban ngày lượng axit này bị phân giải để cấp CO₂ cho chu trình Calvin',
+                    'Do ban đêm cây hô hấp kị khí tạo axit lactic',
+                    'Do ban ngày cây thải hết axit qua lỗ khí khổng ra ngoài không khí',
+                    'Do ánh sáng mặt trời biến đổi trực tiếp axit thành diệp lục'
+                ],
+                correct: 0,
+                explanation: 'Hiện tượng biến thiên độ pH ngày đêm (Deacidification) là đặc trưng kinh điển của thực vật CAM: Đêm tích lũy Axit Malic trong không bào (vị chua sáng sớm), ngày phân giải Axit Malic lấy CO₂ tổng hợp đường (chiều tối hết chua).'
+            },
+            {
+                q: 'Câu 6: Enzyme nào sau đây có ái lực rất cao với CO₂ và hoàn toàn KHÔNG có hoạt tính oxygenase (không gắn với O₂)?',
+                options: [
+                    'Rubisco (RuBP carboxylase/oxygenase)',
+                    'PEP carboxylase',
+                    'ATP synthase',
+                    'Catalase'
+                ],
+                correct: 1,
+                explanation: 'PEP carboxylase chỉ gắn đặc hiệu với CO₂ (dưới dạng HCO₃⁻) mà không hề bị cạnh tranh bởi O₂, giúp thực vật C4 và CAM bơm CO₂ cực kỳ hiệu quả ngay cả khi nồng độ CO₂ thấp.'
+            }
+        ];
+
+        function switchMainTab(tabId) {
+            state.mainTab = tabId;
+            const tabs = ['simulator', 'anatomy', 'compare', 'quiz'];
+            tabs.forEach(t => {
+                const sec = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === tabId) {
+                    sec.classList.remove('hidden');
+                    btn.className = 'main-tab-btn flex-1 md:flex-initial px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-emerald-500 text-slate-950 shadow-md';
+                } else {
+                    sec.classList.add('hidden');
+                    btn.className = 'main-tab-btn flex-1 md:flex-initial px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60';
+                }
+            });
+
+            if (tabId === 'anatomy') {
+                renderAnatomySVG();
+                updateTissuePanel();
+            } else if (tabId === 'compare') {
+                setTimeout(drawComparisonChart, 60);
+            } else if (tabId === 'simulator') {
+                resizePathwayCanvas();
+            }
+        }
+
+        function setPathway(pathway) {
+            state.pathway = pathway;
+            ['C3', 'C4', 'CAM'].forEach(p => {
+                const btn = document.getElementById(`btn-pathway-${p}`);
+                if (p === pathway) {
+                    btn.className = 'pathway-btn p-3 rounded-xl border-2 border-emerald-400 bg-emerald-500/20 text-left transition-all shadow-lg shadow-emerald-950/50';
+                } else {
+                    btn.className = 'pathway-btn p-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:border-emerald-500/40 text-left transition-all';
+                }
+            });
+
+            const info = PATHWAY_DATA[pathway];
+            document.getElementById('plant-example-badge').textContent = info.examples;
+            document.getElementById('sim-canvas-title').innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span> ${info.title}`;
+            document.getElementById('sim-canvas-subtitle').textContent = info.subtitle;
+            document.getElementById('fact-acceptor').textContent = info.acceptor;
+            document.getElementById('fact-product').textContent = info.product;
+            document.getElementById('fact-enzyme').textContent = info.enzyme;
+            document.getElementById('fact-spatiotemporal').textContent = info.spatiotemporal;
+
+            renderPathwaySteps();
+            recalculatePhysiology();
+            initParticles();
+        }
+
+        function renderPathwaySteps() {
+            const container = document.getElementById('pathway-steps-list');
+            const steps = PATHWAY_DATA[state.pathway].steps;
+            container.innerHTML = steps.map((s, idx) => `
+                <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/30 transition">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-bold text-emerald-300">${idx + 1}. ${s.title}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold">${s.badge}</span>
+                    </div>
+                    <p class="text-slate-400 leading-relaxed text-[11px]">${s.desc}</p>
+                </div>
+            `).join('');
+        }
+
+        function setPresetEnv(preset) {
+            if (preset === 'optimal') {
+                document.getElementById('slider-temp').value = 25;
+                document.getElementById('slider-light').value = 75;
+                document.getElementById('slider-water').value = 85;
+                if (!state.isDay) toggleDayNight();
+            } else if (preset === 'hot_dry') {
+                document.getElementById('slider-temp').value = 40;
+                document.getElementById('slider-light').value = 95;
+                document.getElementById('slider-water').value = 22;
+                if (!state.isDay) toggleDayNight();
+            }
+            updateEnvironment();
+        }
+
+        function toggleDayNight() {
+            state.isDay = !state.isDay;
+            const btn = document.getElementById('btn-day-night');
+            const icon = document.getElementById('icon-day-night');
+            const label = document.getElementById('label-day-night');
+            const lightSlider = document.getElementById('slider-light');
+
+            if (state.isDay) {
+                btn.className = 'text-xs font-bold px-3 py-1 rounded-lg bg-amber-400 text-slate-950 flex items-center gap-1.5 shadow transition';
+                icon.className = 'fa-solid fa-sun';
+                label.textContent = 'Ban Ngày';
+                if (parseInt(lightSlider.value) === 0) lightSlider.value = 75;
+            } else {
+                btn.className = 'text-xs font-bold px-3 py-1 rounded-lg bg-indigo-950 text-indigo-200 border border-indigo-500/40 flex items-center gap-1.5 shadow transition';
+                icon.className = 'fa-solid fa-moon';
+                label.textContent = 'Ban Đêm';
+                lightSlider.value = 0;
+            }
+            updateEnvironment();
+        }
+
+        function updateEnvironment() {
+            state.temp = parseInt(document.getElementById('slider-temp').value);
+            state.light = parseInt(document.getElementById('slider-light').value);
+            state.water = parseInt(document.getElementById('slider-water').value);
+
+            if (state.light === 0 && state.isDay) {
+                state.isDay = false;
+                document.getElementById('btn-day-night').className = 'text-xs font-bold px-3 py-1 rounded-lg bg-indigo-950 text-indigo-200 border border-indigo-500/40 flex items-center gap-1.5 shadow transition';
+                document.getElementById('icon-day-night').className = 'fa-solid fa-moon';
+                document.getElementById('label-day-night').textContent = 'Ban Đêm';
+            } else if (state.light > 0 && !state.isDay) {
+                state.isDay = true;
+                document.getElementById('btn-day-night').className = 'text-xs font-bold px-3 py-1 rounded-lg bg-amber-400 text-slate-950 flex items-center gap-1.5 shadow transition';
+                document.getElementById('icon-day-night').className = 'fa-solid fa-sun';
+                document.getElementById('label-day-night').textContent = 'Ban Ngày';
+            }
+
+            document.getElementById('val-temp').textContent = `${state.temp}°C`;
+            document.getElementById('val-light').textContent = `${state.light}%`;
+            document.getElementById('val-water').textContent = `${state.water}%`;
+
+            recalculatePhysiology();
+        }
+
+        function recalculatePhysiology() {
+            const { pathway, isDay, temp, light, water } = state;
+            let stomata = 0;
+            let photo = 0;
+            let resp = 0;
+            let waterLoss = 0;
+            let statusHTML = '';
+            let bannerClass = 'p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/30 flex items-start gap-3 text-xs';
+
+            if (pathway === 'C3') {
+                if (!isDay) {
+                    stomata = 0.05;
+                    photo = 0;
+                    resp = 0;
+                    waterLoss = 4;
+                    statusHTML = `<strong>Ban đêm ở Thực vật C3:</strong> Khí khổng đóng lại, không có ánh sáng nên pha sáng ngừng hoạt động, chu trình Calvin tạm dừng.`;
+                } else {
+                    // Stomata closes when hot and dry
+                    const heatStress = Math.max(0, (temp - 28) / 17);
+                    const droughtStress = Math.max(0, (60 - water) / 50);
+                    stomata = Math.max(0.15, Math.min(1, (water / 100) * (1 - heatStress * 0.65)));
+
+                    if (temp >= 33 || water <= 35) {
+                        resp = Math.min(85, Math.round((heatStress * 65 + droughtStress * 35)));
+                        photo = Math.max(12, Math.round((light / 100) * (100 - resp * 0.85)));
+                        waterLoss = Math.round(stomata * (temp / 45) * 90);
+                        bannerClass = 'p-3 rounded-xl bg-rose-950/70 border border-rose-500/50 flex items-start gap-3 text-xs';
+                        statusHTML = `<strong>CẢNH BÁO HÔ HẤP SÁNG CAO (${resp}%):</strong> Nhiệt độ cao (${temp}°C) và thiếu nước làm khí khổng khép bớt. Nồng độ CO₂ nội bào tụt xuống, O₂ tích tụ cao khiến enzyme <strong>Rubisco gắn với O₂</strong> thay vì CO₂, gây lãng phí nghiêm trọng chất hữu cơ!`;
+                    } else {
+                        resp = Math.max(5, Math.round((temp - 15) * 0.8));
+                        const tempFactor = 1 - Math.abs(temp - 24) / 28;
+                        photo = Math.max(10, Math.min(96, Math.round((light / 100) * tempFactor * 105)));
+                        waterLoss = Math.round(stomata * (temp / 45) * 75);
+                        statusHTML = `<strong>Điều kiện tối ưu cho C3:</strong> Khí khổng mở rộng (${Math.round(stomata * 100)}%), CO₂ dồi dào đi vào mô giậu. Enzyme <strong>Rubisco</strong> hoạt động hiệu quả giúp chu trình Calvin tổng hợp Glucose mạnh mẽ.`;
+                    }
+                }
+            } else if (pathway === 'C4') {
+                if (!isDay) {
+                    stomata = 0.05;
+                    photo = 0;
+                    resp = 0;
+                    waterLoss = 3;
+                    statusHTML = `<strong>Ban đêm ở Thực vật C4:</strong> Khí khổng đóng, cả hai chu trình tại tế bào mô giậu và tế bào bao bó mạch đều nghỉ.`;
+                } else {
+                    stomata = Math.max(0.28, Math.min(0.75, (water / 100) * 0.75));
+                    resp = 2; // Virtually zero photorespiration due to Kranz CO2 pump
+                    const tempOpt = 1 - Math.abs(temp - 36) / 30;
+                    photo = Math.max(18, Math.min(99, Math.round((light / 100) * Math.max(0.4, tempOpt) * (0.5 + water / 200) * 110)));
+                    waterLoss = Math.round(stomata * (temp / 45) * 55);
+                    statusHTML = `<strong>Ưu thế vượt trội của Giải phẫu Kranz (C4):</strong> Nhờ enzyme <strong>PEP carboxylase</strong> ở mô giậu liên tục bơm axit 4C (Malate) vào <strong>Tế bào bao bó mạch</strong>, nồng độ CO₂ quanh Rubisco luôn cao gấp 10-20 lần, triệt tiêu hoàn toàn Hô hấp sáng ngay cả ở ${temp}°C!`;
+                }
+            } else if (pathway === 'CAM') {
+                if (!isDay) {
+                    // Night: Stomata OPEN in CAM!
+                    stomata = Math.max(0.45, Math.min(0.92, water / 100 + 0.2));
+                    photo = 15; // Fixing CO2 into Malic Acid (not full glucose yet, but active C fixation)
+                    resp = 0;
+                    waterLoss = Math.round(stomata * 18); // Very low water loss at cool night
+                    bannerClass = 'p-3 rounded-xl bg-cyan-950/70 border border-cyan-500/40 flex items-start gap-3 text-xs';
+                    statusHTML = `<strong>PHA BAN ĐÊM Ở CÂY CAM (Mở Khí Khổng):</strong> Trời mát, khí khổng mở (${Math.round(stomata * 100)}%). <strong>PEP carboxylase</strong> gắn CO₂ vào PEP (3C) tạo OAA → chuyển thành <strong>Axit Malic (4C)</strong> bơm vào tích trữ đầy trong <strong>Không bào lớn</strong>.`;
+                } else {
+                    // Day: Stomata CLOSED in CAM!
+                    stomata = 0.02;
+                    resp = 3;
+                    waterLoss = 4; // Almost zero water loss during hot day!
+                    photo = Math.max(25, Math.min(72, Math.round((light / 100) * 68)));
+                    statusHTML = `<strong>PHA BAN NGÀY Ở CÂY CAM (Đóng Kín Khí Khổng):</strong> Khí khổng đóng chặt (mất nước chỉ ${waterLoss}%) để chống hạn. <strong>Axit Malic (4C)</strong> từ Không bào đi ra lục lạp, phân giải giải phóng CO₂ nội bào cho <strong>Chu trình Calvin</strong> tổng hợp Glucose!`;
+                }
+            }
+
+            state.stomataOpening = stomata;
+            state.photoRate = photo;
+            state.photoRespRate = resp;
+            state.waterLossRate = waterLoss;
+
+            // Update DOM gauges
+            document.getElementById('stomata-badge').textContent = `Khí khổng: ${stomata < 0.1 ? 'Đóng kín' : 'Mở ' + Math.round(stomata * 100) + '%'}`;
+            document.getElementById('stomata-badge').className = stomata < 0.1
+                ? 'px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold'
+                : 'px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold';
+
+            document.getElementById('metric-photo-val').textContent = `${photo}%`;
+            document.getElementById('metric-photo-bar').style.width = `${photo}%`;
+
+            document.getElementById('metric-resp-val').textContent = `${resp}%`;
+            document.getElementById('metric-resp-bar').style.width = `${resp}%`;
+
+            document.getElementById('metric-water-val').textContent = `${waterLoss}%`;
+            document.getElementById('metric-water-bar').style.width = `${waterLoss}%`;
+
+            document.getElementById('sim-status-banner').className = bannerClass;
+            document.getElementById('sim-status-text').innerHTML = statusHTML;
+        }
+
+        const canvas = document.getElementById('pathwayCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizePathwayCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+        }
+
+        window.addEventListener('resize', () => {
+            resizePathwayCanvas();
+            if (state.mainTab === 'compare') drawComparisonChart();
+        });
+
+        function initParticles() {
+            state.particles = [];
+            for (let i = 0; i < 26; i++) {
+                state.particles.push({
+                    progress: Math.random(),
+                    speed: 0.0025 + Math.random() * 0.002,
+                    type: i % 3 === 0 ? 'secondary' : 'primary',
+                    offset: (Math.random() - 0.5) * 14
+                });
+            }
+        }
+
+        function togglePauseSim() {
+            state.paused = !state.paused;
+            document.getElementById('icon-pause-sim').className = state.paused ? 'fa-solid fa-play text-emerald-400' : 'fa-solid fa-pause';
+            document.getElementById('text-pause-sim').textContent = state.paused ? 'Tiếp tục' : 'Tạm dừng';
+        }
+
+        function stepSimSpeed() {
+            const speeds = [1, 1.5, 2, 0.5];
+            const nextIdx = (speeds.indexOf(state.speed) + 1) % speeds.length;
+            state.speed = speeds[nextIdx];
+            document.getElementById('btn-speed-sim').textContent = `Tốc độ: ${state.speed}x`;
+        }
+
+        function drawRoundedRect(ctx, x, y, w, h, r, fill, stroke, lineWidth = 1.5) {
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, r);
+            if (fill) {
+                ctx.fillStyle = fill;
+                ctx.fill();
+            }
+            if (stroke) {
+                ctx.strokeStyle = stroke;
+                ctx.lineWidth = lineWidth;
+                ctx.stroke();
+            }
+        }
+
+        function drawMolecule(ctx, x, y, radius, color, label, textColor = '#022c22') {
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.restore();
+
+            if (label) {
+                ctx.fillStyle = textColor;
+                ctx.font = `bold ${Math.max(9, radius - 2)}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, x, y);
+            }
+        }
+
+        function drawCalvinWheel(ctx, cx, cy, r, angle, activeRate, labelPrefix = 'Chu trình Calvin') {
+            ctx.save();
+            // Outer glow ring
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = activeRate > 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(100, 116, 139, 0.25)';
+            ctx.lineWidth = 10;
+            ctx.stroke();
+
+            // Rotating dashed ring
+            ctx.translate(cx, cy);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.setLineDash([12, 10]);
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.strokeStyle = activeRate > 0 ? '#34d399' : '#475569';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 3 orbiting intermediate nodes on the wheel (RuBP, PGA, G3P)
+            const nodes = [
+                { a: 0, text: 'RuBP (5C)', col: '#a78bfa' },
+                { a: (Math.PI * 2) / 3, text: 'PGA (3C)', col: '#34d399' },
+                { a: (Math.PI * 4) / 3, text: 'G3P (3C)', col: '#fbbf24' }
+            ];
+            nodes.forEach(n => {
+                const nx = Math.cos(n.a) * r;
+                const ny = Math.sin(n.a) * r;
+                ctx.save();
+                ctx.translate(nx, ny);
+                ctx.rotate(-angle);
+                drawRoundedRect(ctx, -28, -11, 56, 22, 6, '#0f172a', n.col, 1.5);
+                ctx.fillStyle = '#f8fafc';
+                ctx.font = 'bold 9px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(n.text, 0, 0);
+                ctx.restore();
+            });
+            ctx.restore();
+
+            // Center title
+            ctx.fillStyle = activeRate > 0 ? '#ecfdf5' : '#64748b';
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(labelPrefix, cx, cy - 6);
+            ctx.fillStyle = activeRate > 0 ? '#fbbf24' : '#64748b';
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.fillText('Enzyme: Rubisco', cx, cy + 10);
+        }
+
+        function renderSimulationFrame() {
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+            if (!w || !h) return;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Background sky/environment strip at top
+            const topBarH = 54;
+            const skyGrad = ctx.createLinearGradient(0, 0, w, 0);
+            if (state.isDay) {
+                skyGrad.addColorStop(0, 'rgba(245, 158, 11, 0.16)');
+                skyGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.15)');
+                skyGrad.addColorStop(1, 'rgba(16, 185, 129, 0.12)');
+            } else {
+                skyGrad.addColorStop(0, 'rgba(30, 27, 75, 0.6)');
+                skyGrad.addColorStop(1, 'rgba(15, 23, 42, 0.7)');
+            }
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, topBarH);
+
+            // Epidermis & Stomata Gate at y = topBarH
+            const stomaX = w * 0.25;
+            const stomaGap = 6 + state.stomataOpening * 34;
+
+            // Epidermis wall left and right of stoma
+            drawRoundedRect(ctx, 12, topBarH - 12, stomaX - stomaGap - 22, 18, 6, '#1e293b', '#475569');
+            drawRoundedRect(ctx, stomaX + stomaGap + 10, topBarH - 12, w - (stomaX + stomaGap + 22), 18, 6, '#1e293b', '#475569');
+
+            // Guard cells (Tế bào hạt đậu khí khổng)
+            drawRoundedRect(ctx, stomaX - stomaGap - 18, topBarH - 15, 18, 24, 9, '#059669', '#34d399', 2);
+            drawRoundedRect(ctx, stomaX + stomaGap, topBarH - 15, 18, 24, 9, '#059669', '#34d399', 2);
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(state.isDay ? `☀️ Môi trường ngoài (${state.temp}°C)` : `🌙 Ban đêm (${state.temp}°C)`, 20, 24);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = state.stomataOpening > 0.15 ? '#34d399' : '#fbbf24';
+            ctx.fillText(`Khí khổng (${state.stomataOpening < 0.1 ? 'ĐÓNG' : 'Mở ' + Math.round(state.stomataOpening * 100) + '%'})`, stomaX, 22);
+
+            // Advance animation timers if not paused
+            if (!state.paused) {
+                const dt = 0.016 * state.speed;
+                state.timeTick += dt;
+                if (state.photoRate > 0 && (state.isDay || state.pathway !== 'CAM')) {
+                    state.calvinAngle += dt * (0.4 + (state.photoRate / 100) * 1.4);
+                }
+                state.particles.forEach(p => {
+                    p.progress = (p.progress + p.speed * state.speed) % 1;
+                });
+            }
+
+            // Render pathway-specific cell compartments
+            if (state.pathway === 'C3') {
+                drawC3Compartment(ctx, w, h, topBarH, stomaX);
+            } else if (state.pathway === 'C4') {
+                drawC4Compartments(ctx, w, h, topBarH, stomaX);
+            } else {
+                drawCAMCompartment(ctx, w, h, topBarH, stomaX);
+            }
+        }
+
+        function drawC3Compartment(ctx, w, h, topBarH, stomaX) {
+            const cellX = 24;
+            const cellY = topBarH + 18;
+            const cellW = w - 48;
+            const cellH = h - topBarH - 64;
+
+            // Mesophyll Cell Box
+            drawRoundedRect(ctx, cellX, cellY, cellW, cellH, 18, 'rgba(6, 78, 59, 0.25)', '#10b981', 2);
+            ctx.fillStyle = '#6ee7b7';
+            ctx.font = 'bold 13px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('TẾ BÀO MÔ GIẬU (MESOPHYLL CELL - C3)', cellX + 18, cellY + 26);
+
+            // Chloroplast Oval inside
+            const chloroX = cellX + cellW * 0.18;
+            const chloroY = cellY + 42;
+            const chloroW = cellW * 0.78;
+            const chloroH = cellH - 58;
+            drawRoundedRect(ctx, chloroX, chloroY, chloroW, chloroH, 28, 'rgba(4, 47, 46, 0.7)', 'rgba(52, 211, 153, 0.45)', 1.5);
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.fillText('LỤC LẠP (CHLOROPLAST)', chloroX + 18, chloroY + 22);
+
+            // Calvin Wheel center
+            const wheelX = chloroX + chloroW * 0.55;
+            const wheelY = chloroY + chloroH * 0.52;
+            const wheelR = Math.min(chloroW, chloroH) * 0.29;
+            drawCalvinWheel(ctx, wheelX, wheelY, wheelR, state.calvinAngle, state.photoRate, 'Chu trình Calvin (C3)');
+
+            // Glucose output box on the right
+            const outX = chloroX + chloroW - 115;
+            const outY = wheelY - 22;
+            drawRoundedRect(ctx, outX, outY, 98, 44, 10, 'rgba(16, 185, 129, 0.2)', '#10b981', 1.5);
+            ctx.fillStyle = '#ecfdf5';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('C₆H₁₂O₆', outX + 49, outY + 17);
+            ctx.fillStyle = '#6ee7b7';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.fillText(`Hiệu suất: ${state.photoRate}%`, outX + 49, outY + 32);
+
+            // Photorespiration (Hô hấp sáng) zone if active
+            if (state.photoRespRate >= 25 && state.isDay) {
+                const prX = chloroX + 20;
+                const prY = chloroY + chloroH - 68;
+                drawRoundedRect(ctx, prX, prY, 175, 52, 10, 'rgba(159, 18, 57, 0.35)', '#f43f5e', 1.5);
+                ctx.fillStyle = '#fda4af';
+                ctx.font = 'bold 11px Inter, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(`⚠️ HÔ HẤP SÁNG (${state.photoRespRate}%)`, prX + 10, prY + 18);
+                ctx.fillStyle = '#fecdd3';
+                ctx.font = '10px Inter, sans-serif';
+                ctx.fillText('Rubisco + O₂ → Lãng phí CO₂', prX + 10, prY + 35);
+            }
+
+            // Animate CO2, O2, and Glucose particles
+            if (!state.isDay) return;
+            state.particles.forEach((p, idx) => {
+                const t = p.progress;
+                if (state.photoRespRate >= 30 && idx % 2 === 0) {
+                    // O2 competitive binding (Photorespiration particle)
+                    const px = chloroX + 50 + t * (wheelX - wheelR - (chloroX + 50));
+                    const py = wheelY + 35 + Math.sin(t * Math.PI * 2) * 15;
+                    drawMolecule(ctx, px, py, 8, '#f43f5e', 'O₂', '#fff');
+                } else {
+                    // CO2 entering through stoma to Calvin wheel
+                    if (t < 0.6) {
+                        const nt = t / 0.6;
+                        const px = stomaX + (wheelX - wheelR - stomaX) * nt;
+                        const py = 18 + (wheelY - 18) * nt + p.offset;
+                        drawMolecule(ctx, px, py, 8.5, '#38bdf8', 'CO₂', '#0f172a');
+                    } else {
+                        // Glucose moving from wheel to output
+                        const nt = (t - 0.6) / 0.4;
+                        const px = wheelX + wheelR + (outX - (wheelX + wheelR)) * nt;
+                        const py = wheelY + p.offset * 0.4;
+                        drawMolecule(ctx, px, py, 9, '#34d399', 'C₆', '#022c22');
+                    }
+                }
+            });
+        }
+
+        function drawC4Compartments(ctx, w, h, topBarH, stomaX) {
+            const marginX = 22;
+            const totalH = h - topBarH - 62;
+            const cellH = (totalH - 14) / 2;
+            const cellW = w - marginX * 2;
+
+            const topCellY = topBarH + 14;
+            const botCellY = topCellY + cellH + 14;
+
+            // 1. TOP CELL: Tế bào Mô Giậu (Mesophyll Cell)
+            drawRoundedRect(ctx, marginX, topCellY, cellW, cellH, 14, 'rgba(6, 78, 59, 0.25)', '#34d399', 1.8);
+            ctx.fillStyle = '#6ee7b7';
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('1. TẾ BÀO MÔ GIẬU (MESOPHYLL CELL)', marginX + 16, topCellY + 22);
+
+            // PEP Carboxylase Fixation Hub in Top Cell
+            const pepX = w * 0.48;
+            const pepY = topCellY + cellH * 0.56;
+            drawRoundedRect(ctx, pepX - 85, pepY - 24, 170, 48, 12, 'rgba(245, 158, 11, 0.18)', '#fbbf24', 1.8);
+            ctx.fillStyle = '#fde68a';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Enzyme: PEP Carboxylase', pepX, pepY - 6);
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.fillText('PEP (3C) + CO₂ → OAA → Malate (4C)', pepX, pepY + 11);
+
+            // 2. BOTTOM CELL: Tế bào Bao Bó Mạch (Bundle Sheath Cell - Kranz)
+            // Thicker suberized cell wall!
+            drawRoundedRect(ctx, marginX, botCellY, cellW, cellH, 14, 'rgba(20, 83, 45, 0.42)', '#fbbf24', 3);
+            ctx.fillStyle = '#fde047';
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('2. TẾ BÀO BAO BÓ MẠCH (BUNDLE SHEATH - GIẢI PHẪU KRANZ)', marginX + 16, botCellY + 22);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.fillText('Vách dày kín khí · Nồng độ CO₂ cực cao · Không có Hô hấp sáng', marginX + 16, botCellY + 38);
+
+            // Plasmodesmata (Cầu sinh chất) channels connecting the two cells
+            const ch1X = w * 0.56;
+            const ch2X = w * 0.36;
+            drawRoundedRect(ctx, ch1X - 16, topCellY + cellH - 4, 32, 22, 4, '#0f172a', '#fbbf24', 1.5);
+            drawRoundedRect(ctx, ch2X - 16, topCellY + cellH - 4, 32, 22, 4, '#0f172a', '#a78bfa', 1.5);
+
+            // Calvin Wheel in Bundle Sheath Cell
+            const wheelX = w * 0.68;
+            const wheelY = botCellY + cellH * 0.54;
+            const wheelR = Math.min(cellW * 0.14, cellH * 0.34);
+            drawCalvinWheel(ctx, wheelX, wheelY, wheelR, state.calvinAngle, state.photoRate, 'Calvin (C4)');
+
+            // Glucose output in Bundle Sheath toward Vascular Bundle
+            const outX = w - marginX - 118;
+            const outY = wheelY - 20;
+            drawRoundedRect(ctx, outX, outY, 102, 42, 10, 'rgba(16, 185, 129, 0.25)', '#34d399', 1.5);
+            ctx.fillStyle = '#ecfdf5';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('C₆H₁₂O₆ → Mạch', outX + 51, outY + 16);
+            ctx.fillStyle = '#6ee7b7';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.fillText(`Hiệu suất: ${state.photoRate}%`, outX + 51, outY + 31);
+
+            if (!state.isDay) return;
+
+            // Animate C4 Molecules: CO2 -> PEP -> Malate (4C) down to Bundle Sheath -> CO2 to Calvin + Pyruvate (3C) up
+            state.particles.forEach(p => {
+                const t = p.progress;
+                if (t < 0.28) {
+                    // CO2 entering from Stomata to PEP Carboxylase
+                    const nt = t / 0.28;
+                    const px = stomaX + (pepX - 50 - stomaX) * nt;
+                    const py = 18 + (pepY - 18) * nt;
+                    drawMolecule(ctx, px, py, 8, '#38bdf8', 'CO₂', '#0f172a');
+                } else if (t < 0.58) {
+                    // 4C Malate moving down through Plasmodesmata into Bundle Sheath
+                    const nt = (t - 0.28) / 0.30;
+                    const px = pepX + 20 + (ch1X - (pepX + 20)) * nt;
+                    const py = pepY + (wheelY - pepY) * nt;
+                    drawMolecule(ctx, px, py, 10, '#fbbf24', '4C', '#0f172a');
+                } else if (t < 0.82) {
+                    // CO2 released inside Bundle Sheath to Calvin Wheel & Glucose out
+                    const nt = (t - 0.58) / 0.24;
+                    const px = ch1X + (wheelX - wheelR - ch1X) * nt;
+                    const py = wheelY + p.offset * 0.4;
+                    drawMolecule(ctx, px, py, 8, '#38bdf8', 'CO₂', '#0f172a');
+                } else {
+                    // 3C Pyruvate returning up to Mesophyll Cell
+                    const nt = (t - 0.82) / 0.18;
+                    const px = ch2X;
+                    const py = (botCellY + 35) + (pepY - (botCellY + 35)) * nt;
+                    drawMolecule(ctx, px, py, 9, '#c084fc', '3C', '#0f172a');
+                }
+            });
+        }
+
+        function drawCAMCompartment(ctx, w, h, topBarH, stomaX) {
+            const cellX = 24;
+            const cellY = topBarH + 16;
+            const cellW = w - 48;
+            const cellH = h - topBarH - 62;
+
+            // Succulent Mesophyll Cell
+            drawRoundedRect(ctx, cellX, cellY, cellW, cellH, 22, 'rgba(8, 51, 68, 0.32)', '#22d3ee', 2.5);
+            ctx.fillStyle = '#67e8f9';
+            ctx.font = 'bold 13px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('TẾ BÀO THỊT LÁ MỌNG NƯỚC (SUCCULENT CAM CELL)', cellX + 18, cellY + 25);
+
+            // Left Half: Giant Central Vacuole (Không bào trung tâm tích trữ Axit Malic)
+            const vacX = cellX + 20;
+            const vacY = cellY + 42;
+            const vacW = cellW * 0.42;
+            const vacH = cellH - 58;
+            const vacFill = !state.isDay ? 'rgba(6, 182, 212, 0.28)' : 'rgba(6, 182, 212, 0.12)';
+            drawRoundedRect(ctx, vacX, vacY, vacW, vacH, 24, vacFill, '#06b6d4', 2);
+
+            ctx.fillStyle = '#a5f3fc';
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('KHÔNG BÀO LỚN (VACUOLE)', vacX + vacW / 2, vacY + 24);
+            ctx.fillStyle = '#fde68a';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.fillText(
+                !state.isDay ? '🌙 Đang tích trữ Axit Malic (4C) ↑' : '☀️ Đang giải phóng Axit Malic (4C) ↓',
+                vacX + vacW / 2,
+                vacY + 44
+            );
+
+            // PEP Carboxylase badge above Vacuole
+            const pepX = vacX + vacW / 2;
+            const pepY = vacY + vacH * 0.65;
+            drawRoundedRect(ctx, pepX - 78, pepY - 22, 156, 44, 10, 'rgba(15, 23, 42, 0.85)', '#fbbf24', 1.5);
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.fillText('Kho dự trữ Axit Malic (4C)', pepX, pepY - 5);
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.fillText(!state.isDay ? 'pH giảm (Vị chua tăng)' : 'pH tăng (Cung cấp CO₂ nội bào)', pepX, pepY + 11);
+
+            // Right Half: Chloroplast with Calvin Cycle (Active in Day)
+            const chX = vacX + vacW + 24;
+            const chY = vacY;
+            const chW = cellW - vacW - 64;
+            const chH = vacH;
+            drawRoundedRect(ctx, chX, chY, chW, chH, 24, 'rgba(4, 47, 46, 0.65)', '#10b981', 1.8);
+            ctx.fillStyle = '#6ee7b7';
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('LỤC LẠP (CHU TRÌNH CALVIN - BAN NGÀY)', chX + chW / 2, chY + 24);
+
+            const wheelX = chX + chW * 0.5;
+            const wheelY = chY + chH * 0.56;
+            const wheelR = Math.min(chW, chH) * 0.27;
+            drawCalvinWheel(ctx, wheelX, wheelY, wheelR, state.calvinAngle, state.isDay ? state.photoRate : 0, 'Calvin (CAM)');
+
+            // Animate CAM Night vs Day flows
+            state.particles.forEach(p => {
+                const t = p.progress;
+                if (!state.isDay) {
+                    // NIGHT MODE: Stomata OPEN -> CO2 enters -> fixed by PEP carboxylase -> Malic Acid (4C) stored in Vacuole
+                    if (t < 0.5) {
+                        const nt = t / 0.5;
+                        const px = stomaX + (pepX - stomaX) * nt;
+                        const py = 18 + (vacY + 70 - 18) * nt;
+                        drawMolecule(ctx, px, py, 8.5, '#38bdf8', 'CO₂', '#0f172a');
+                    } else {
+                        const nt = (t - 0.5) / 0.5;
+                        const angle = nt * Math.PI * 2;
+                        const px = pepX + Math.cos(angle) * 42;
+                        const py = pepY + Math.sin(angle) * 28;
+                        drawMolecule(ctx, px, py, 10, '#fbbf24', '4C', '#0f172a');
+                    }
+                } else {
+                    // DAY MODE: Stomata CLOSED! Malic Acid (4C) leaves Vacuole -> releases CO2 to Calvin Wheel -> Glucose
+                    if (t < 0.45) {
+                        const nt = t / 0.45;
+                        const px = pepX + (wheelX - wheelR - pepX) * nt;
+                        const py = pepY + (wheelY - pepY) * nt + p.offset * 0.4;
+                        drawMolecule(ctx, px, py, 9.5, nt < 0.5 ? '#fbbf24' : '#38bdf8', nt < 0.5 ? '4C' : 'CO₂', '#0f172a');
+                    } else {
+                        const nt = (t - 0.45) / 0.55;
+                        const px = wheelX + (chX + chW - 35 - wheelX) * nt;
+                        const py = wheelY + p.offset * 0.3;
+                        drawMolecule(ctx, px, py, 9, '#34d399', 'C₆', '#022c22');
+                    }
+                }
+            });
+        }
+
+        function setAnatomyType(type) {
+            state.anatomyType = type;
+            ['C3', 'C4', 'CAM'].forEach(t => {
+                const btn = document.getElementById(`anat-btn-${t}`);
+                if (t === type) {
+                    btn.className = 'anat-type-btn px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 transition shadow';
+                } else {
+                    btn.className = 'anat-type-btn px-3.5 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition';
+                }
+            });
+
+            const titles = {
+                C3: 'Lát cắt ngang: Lá Thực Vật C3 (Mô giậu & Mô khuyết phân hóa)',
+                C4: 'Lát cắt ngang: Lá Thực Vật C4 (Cấu trúc vòng hoa Kranz điển hình)',
+                CAM: 'Lát cắt ngang: Lá Thực Vật CAM (Mô thịt lá mọng nước, Không bào lớn)'
+            };
+            document.getElementById('anatomy-svg-badge').textContent = titles[type];
+            renderAnatomySVG();
+            updateTissuePanel();
+        }
+
+        function selectTissue(tissueKey) {
+            state.selectedTissue = tissueKey;
+            renderAnatomySVG();
+            updateTissuePanel();
+        }
+
+        function updateTissuePanel() {
+            const data = TISSUE_DATA[state.selectedTissue];
+            document.getElementById('tissue-tag').textContent = data.tag;
+            document.getElementById('tissue-title').textContent = data.title;
+            document.getElementById('tissue-desc').textContent = data.desc;
+            document.getElementById('tissue-c3-diff').textContent = data.c3;
+            document.getElementById('tissue-c4-diff').textContent = data.c4;
+            document.getElementById('tissue-cam-diff').textContent = data.cam;
+        }
+
+        function renderAnatomySVG() {
+            const container = document.getElementById('anatomy-svg-container');
+            const sel = state.selectedTissue;
+            const type = state.anatomyType;
+            const isSel = (k) => sel === k ? 'selected-tissue' : '';
+
+            // Cuticle thickness varies (CAM is thickest)
+            const cutH = type === 'CAM' ? 16 : 9;
+
+            // Middle mesophyll + bundle sheath layout depends on C3 vs C4 Kranz vs CAM Succulent
+            let middleCellsSVG = '';
+
+            if (type === 'C3') {
+                // C3: Palisade layer on top + Spongy mesophyll below + small thin bundle sheath around central vein
+                let palisadeRects = '';
+                for (let x = 25; x <= 535; x += 38) {
+                    palisadeRects += `
+                        <rect x="${x}" y="58" width="32" height="72" rx="10" fill="#065f46" stroke="#10b981" stroke-width="1.5"/>
+                        <circle cx="${x + 10}" cy="75" r="4" fill="#34d399"/>
+                        <circle cx="${x + 22}" cy="92" r="4" fill="#34d399"/>
+                        <circle cx="${x + 12}" cy="112" r="4" fill="#34d399"/>
+                    `;
+                }
+                middleCellsSVG = `
+                    <!-- Palisade & Spongy Mesophyll -->
+                    <g onclick="selectTissue('palisade')" class="tissue-layer ${isSel('palisade')}">
+                        ${palisadeRects}
+                        <!-- Spongy cells left and right of vein -->
+                        <ellipse cx="75" cy="170" rx="28" ry="20" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                        <ellipse cx="145" cy="185" rx="26" ry="22" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                        <ellipse cx="95" cy="222" rx="30" ry="18" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                        <ellipse cx="445" cy="172" rx="28" ry="20" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                        <ellipse cx="515" cy="195" rx="26" ry="22" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                        <ellipse cx="465" cy="225" rx="28" ry="18" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                    </g>
+                    <!-- Small C3 Bundle Sheath (Few/no chloroplasts) -->
+                    <g onclick="selectTissue('bundle_sheath')" class="tissue-layer ${isSel('bundle_sheath')}">
+                        <circle cx="290" cy="182" r="56" fill="#134e4a" stroke="#5eead4" stroke-width="2" stroke-dasharray="6,3"/>
+                        <text x="290" y="116" text-anchor="middle" fill="#99f6e4" font-size="10" font-weight="bold">Bao bó mạch C3 (Nhỏ, ít lục lạp)</text>
+                    </g>
+                `;
+            } else if (type === 'C4') {
+                // C4 KRANZ ANATOMY: Large thick-walled Bundle Sheath ring packed with chloroplasts + radiating Mesophyll ring
+                let kranzSheathCells = '';
+                let kranzMesophyllCells = '';
+                const cx = 290, cy = 165;
+                for (let i = 0; i < 10; i++) {
+                    const ang = (i * Math.PI * 2) / 10;
+                    const bx = cx + Math.cos(ang) * 56;
+                    const by = cy + Math.sin(ang) * 56;
+                    kranzSheathCells += `
+                        <circle cx="${bx}" cy="${by}" r="18" fill="#065f46" stroke="#fbbf24" stroke-width="3"/>
+                        <circle cx="${bx - 5}" cy="${by - 4}" r="4.5" fill="#fde047"/>
+                        <circle cx="${bx + 5}" cy="${by + 4}" r="4.5" fill="#fde047"/>
+                    `;
+                }
+                for (let i = 0; i < 14; i++) {
+                    const ang = (i * Math.PI * 2) / 14;
+                    const mx = cx + Math.cos(ang) * 96;
+                    const my = cy + Math.sin(ang) * 76;
+                    kranzMesophyllCells += `
+                        <ellipse cx="${mx}" cy="${my}" rx="20" ry="15" fill="#047857" stroke="#34d399" stroke-width="1.8"/>
+                        <circle cx="${mx}" cy="${my}" r="4" fill="#6ee7b7"/>
+                    `;
+                }
+                middleCellsSVG = `
+                    <!-- Radiating Mesophyll Ring -->
+                    <g onclick="selectTissue('palisade')" class="tissue-layer ${isSel('palisade')}">
+                        ${kranzMesophyllCells}
+                        <ellipse cx="85" cy="115" rx="28" ry="22" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                        <ellipse cx="85" cy="195" rx="28" ry="22" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                        <ellipse cx="495" cy="115" rx="28" ry="22" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                        <ellipse cx="495" cy="195" rx="28" ry="22" fill="#047857" stroke="#34d399" stroke-width="1.5"/>
+                    </g>
+                    <!-- Kranz Bundle Sheath Wreath -->
+                    <g onclick="selectTissue('bundle_sheath')" class="tissue-layer ${isSel('bundle_sheath')}">
+                        ${kranzSheathCells}
+                        <text x="290" y="72" text-anchor="middle" fill="#fde047" font-size="11" font-weight="bold">★ Vòng Bao Bó Mạch KRANZ (Dày, giàu Rubisco)</text>
+                    </g>
+                `;
+            } else {
+                // CAM: Huge succulent cells with giant central blueshift vacuoles
+                let camCells = '';
+                const coords = [
+                    [80, 105], [165, 105], [415, 105], [500, 105],
+                    [80, 195], [165, 195], [415, 195], [500, 195]
+                ];
+                coords.forEach(([x, y]) => {
+                    camCells += `
+                        <rect x="${x - 36}" y="${y - 36}" width="72" height="72" rx="22" fill="#064e3b" stroke="#22d3ee" stroke-width="2"/>
+                        <rect x="${x - 25}" y="${y - 25}" width="50" height="50" rx="16" fill="#083344" stroke="#38bdf8" stroke-width="1.5"/>
+                        <text x="${x}" y="${y + 3}" text-anchor="middle" fill="#7dd3fc" font-size="8" font-weight="bold">Không bào</text>
+                    `;
+                });
+                middleCellsSVG = `
+                    <g onclick="selectTissue('palisade')" class="tissue-layer ${isSel('palisade')}">
+                        ${camCells}
+                    </g>
+                    <g onclick="selectTissue('bundle_sheath')" class="tissue-layer ${isSel('bundle_sheath')}">
+                        <circle cx="290" cy="165" r="52" fill="#0f766e" stroke="#5eead4" stroke-width="2"/>
+                    </g>
+                `;
+            }
+
+            container.innerHTML = `
+                <svg viewBox="0 0 580 310" class="w-full h-auto select-none">
+                    <!-- 1. Cuticle Layer (Top & Bottom) -->
+                    <g onclick="selectTissue('cuticle')" class="tissue-layer ${isSel('cuticle')}">
+                        <rect x="15" y="12" width="550" height="${cutH}" rx="4" fill="#fbbf24" opacity="0.85"/>
+                        <rect x="15" y="${296 - cutH}" width="550" height="${cutH}" rx="4" fill="#fbbf24" opacity="0.85"/>
+                        <text x="555" y="23" text-anchor="end" fill="#090d16" font-size="9" font-weight="bold">Lớp sáp Cutin</text>
+                    </g>
+
+                    <!-- 2. Upper & Lower Epidermis -->
+                    <g onclick="selectTissue('epidermis')" class="tissue-layer ${isSel('epidermis')}">
+                        <rect x="15" y="26" width="550" height="24" rx="5" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+                        <rect x="15" y="256" width="210" height="24" rx="5" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+                        <rect x="335" y="256" width="230" height="24" rx="5" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+                        <text x="30" y="42" fill="#cbd5e1" font-size="10" font-weight="bold">Biểu bì trên (Upper Epidermis)</text>
+                        <text x="355" y="272" fill="#cbd5e1" font-size="10" font-weight="bold">Biểu bì dưới (Lower Epidermis)</text>
+                    </g>
+
+                    <!-- 3 & 4. Mesophyll & Bundle Sheath (Dynamic by C3/C4/CAM) -->
+                    ${middleCellsSVG}
+
+                    <!-- 5. Central Vascular Bundle (Xylem + Phloem) -->
+                    <g onclick="selectTissue('vascular')" class="tissue-layer ${isSel('vascular')}">
+                        <circle cx="290" cy="${type === 'C3' ? 182 : 165}" r="34" fill="#1e1b4b" stroke="#818cf8" stroke-width="2.5"/>
+                        <!-- Xylem vessels (top half) -->
+                        <circle cx="278" cy="${type === 'C3' ? 170 : 153}" r="7" fill="#f43f5e"/>
+                        <circle cx="292" cy="${type === 'C3' ? 168 : 151}" r="8" fill="#f43f5e"/>
+                        <circle cx="304" cy="${type === 'C3' ? 172 : 155}" r="6.5" fill="#f43f5e"/>
+                        <!-- Phloem sieve tubes (bottom half) -->
+                        <circle cx="280" cy="${type === 'C3' ? 194 : 177}" r="6" fill="#38bdf8"/>
+                        <circle cx="293" cy="${type === 'C3' ? 196 : 179}" r="6" fill="#38bdf8"/>
+                        <circle cx="304" cy="${type === 'C3' ? 192 : 175}" r="6" fill="#38bdf8"/>
+                    </g>
+
+                    <!-- 6. Stomata & Air Space at Bottom -->
+                    <g onclick="selectTissue('stomata')" class="tissue-layer ${isSel('stomata')}">
+                        <rect x="230" y="252" width="26" height="30" rx="13" fill="#10b981" stroke="#ecfdf5" stroke-width="2"/>
+                        <rect x="304" y="252" width="26" height="30" rx="13" fill="#10b981" stroke="#ecfdf5" stroke-width="2"/>
+                        <path d="M 280 295 L 280 235" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="4,3"/>
+                        <text x="280" y="305" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="bold">Khí khổng (CO₂ ↑ / H₂O ↓)</text>
+                    </g>
+                </svg>
+            `;
+        }
+
+        function drawComparisonChart() {
+            const cCanvas = document.getElementById('comparisonChartCanvas');
+            if (!cCanvas) return;
+            const cCtx = cCanvas.getContext('2d');
+            const rect = cCanvas.parentElement.getBoundingClientRect();
+            cCanvas.width = rect.width * window.devicePixelRatio;
+            cCanvas.height = rect.height * window.devicePixelRatio;
+            cCtx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+
+            const w = rect.width;
+            const h = rect.height;
+            const padL = 48, padR = 24, padT = 24, padB = 36;
+            const plotW = w - padL - padR;
+            const plotH = h - padT - padB;
+
+            cCtx.clearRect(0, 0, w, h);
+
+            // Grid & Axes
+            cCtx.strokeStyle = '#1e293b';
+            cCtx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padT + (plotH * i) / 4;
+                cCtx.beginPath();
+                cCtx.moveTo(padL, y);
+                cCtx.lineTo(w - padR, y);
+                cCtx.stroke();
+
+                cCtx.fillStyle = '#64748b';
+                cCtx.font = '10px Inter, sans-serif';
+                cCtx.textAlign = 'right';
+                cCtx.fillText(`${100 - i * 25}%`, padL - 8, y + 3);
+            }
+
+            // Temperature X labels (10°C to 45°C)
+            const temps = [10, 15, 20, 25, 30, 35, 40, 45];
+            temps.forEach((t, idx) => {
+                const x = padL + (plotW * idx) / (temps.length - 1);
+                cCtx.fillStyle = '#94a3b8';
+                cCtx.font = '10px Inter, sans-serif';
+                cCtx.textAlign = 'center';
+                cCtx.fillText(`${t}°C`, x, h - 12);
+            });
+
+            // Plot curves: C3 (peaks ~24C), C4 (peaks ~36C), CAM (steady low-moderate, tolerant to 45C)
+            const plotCurve = (fn, color, label) => {
+                cCtx.beginPath();
+                for (let px = 0; px <= plotW; px += 3) {
+                    const temp = 10 + (px / plotW) * 35;
+                    const val = fn(temp);
+                    const x = padL + px;
+                    const y = padT + plotH * (1 - val / 100);
+                    if (px === 0) cCtx.moveTo(x, y);
+                    else cCtx.lineTo(x, y);
+                }
+                cCtx.strokeStyle = color;
+                cCtx.lineWidth = 3;
+                cCtx.stroke();
+
+                // End label
+                const endVal = fn(45);
+                const endY = padT + plotH * (1 - endVal / 100);
+                cCtx.fillStyle = color;
+                cCtx.font = 'bold 11px Inter, sans-serif';
+                cCtx.textAlign = 'right';
+                cCtx.fillText(label, w - padR - 6, endY - 8);
+            };
+
+            // C3 Curve
+            plotCurve(t => Math.max(12, 78 * Math.exp(-Math.pow((t - 23) / 11, 2))), '#34d399', 'Thực vật C3 (Tối ưu 20-25°C)');
+            // C4 Curve
+            plotCurve(t => Math.max(15, 96 * Math.exp(-Math.pow((t - 36) / 13, 2))), '#fbbf24', 'Thực vật C4 (Tối ưu 32-40°C)');
+            // CAM Curve
+            plotCurve(t => Math.max(18, 36 * Math.exp(-Math.pow((t - 38) / 22, 2))), '#38bdf8', 'Thực vật CAM (Chịu hạn sa mạc)');
+        }
+
+        let userAnswers = {};
+
+        function renderQuiz() {
+            const container = document.getElementById('quiz-container');
+            let score = 0;
+            Object.keys(userAnswers).forEach(qIdx => {
+                if (userAnswers[qIdx] === QUIZ_QUESTIONS[qIdx].correct) score++;
+            });
+            document.getElementById('quiz-score-badge').textContent = `${score} / ${QUIZ_QUESTIONS.length}`;
+
+            container.innerHTML = QUIZ_QUESTIONS.map((item, qIdx) => {
+                const answered = userAnswers[qIdx] !== undefined;
+                const chosen = userAnswers[qIdx];
+
+                const optsHTML = item.options.map((opt, oIdx) => {
+                    let btnStyle = 'bg-slate-900/80 hover:bg-slate-800 border-slate-700 text-slate-200';
+                    let iconHTML = `<span class="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center text-[10px] font-bold">${String.fromCharCode(65 + oIdx)}</span>`;
+
+                    if (answered) {
+                        if (oIdx === item.correct) {
+                            btnStyle = 'bg-emerald-950/90 border-emerald-500 text-emerald-200 font-semibold';
+                            iconHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i>`;
+                        } else if (oIdx === chosen) {
+                            btnStyle = 'bg-rose-950/80 border-rose-500 text-rose-200';
+                            iconHTML = `<i class="fa-solid fa-circle-xmark text-rose-400"></i>`;
+                        } else {
+                            btnStyle = 'bg-slate-950/50 border-slate-800 text-slate-500';
+                        }
+                    }
+
+                    return `
+                        <button onclick="answerQuiz(${qIdx}, ${oIdx})" ${answered ? 'disabled' : ''} class="w-full text-left p-3 rounded-xl border transition flex items-center gap-3 text-xs sm:text-sm ${btnStyle}">
+                            ${iconHTML}
+                            <span class="flex-1">${opt}</span>
+                        </button>
+                    `;
+                }).join('');
+
+                const expHTML = answered ? `
+                    <div class="mt-3 p-3 rounded-xl bg-slate-950 border border-emerald-500/30 text-xs text-slate-300 leading-relaxed">
+                        <strong class="text-emerald-400"><i class="fa-solid fa-lightbulb mr-1"></i>Giải thích:</strong> ${item.explanation}
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
+                        <h4 class="font-bold text-white text-sm mb-3">${item.q}</h4>
+                        <div class="space-y-2">${optsHTML}</div>
+                        ${expHTML}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function answerQuiz(qIdx, oIdx) {
+            userAnswers[qIdx] = oIdx;
+            renderQuiz();
+        }
+
+        function resetQuiz() {
+            userAnswers = {};
+            renderQuiz();
+        }
+
+        function animateLoop() {
+            if (state.mainTab === 'simulator') {
+                renderSimulationFrame();
+            }
+            requestAnimationFrame(animateLoop);
+        }
+
+        window.onload = function () {
+            resizePathwayCanvas();
+            setPathway('C3');
+            renderAnatomySVG();
+            updateTissuePanel();
+            renderQuiz();
+            animateLoop();
+        };
+    </script>
+</body>
+</html>
