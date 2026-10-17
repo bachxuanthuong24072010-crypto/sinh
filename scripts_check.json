@@ -1,0 +1,16 @@
+{
+  "scripts": [
+    "https://cdn.tailwindcss.com/",
+    "file:///D:/D%E1%BB%B0%20%C3%81N/xlsx.js",
+    "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js",
+    "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js",
+    "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js",
+    "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js",
+    "file:///D:/D%E1%BB%B0%20%C3%81N/exam_data.js",
+    "file:///D:/D%E1%BB%B0%20%C3%81N/app.js"
+  ],
+  "hasExamBank10": true,
+  "hasExamBank11": true,
+  "hasExamBank12": true,
+  "hasExamBank": true
+}

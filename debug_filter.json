@@ -1,0 +1,23 @@
+{
+  "hasG11": true,
+  "hasPhys11": true,
+  "phys11Len": 119,
+  "poolLen": 403,
+  "samplePool": [
+    {
+      "id": "m12_gen_44",
+      "grade": "12",
+      "topic": "Tọa độ không gian Oxyz"
+    },
+    {
+      "id": "m12_gen_89",
+      "grade": "12",
+      "topic": "Ứng dụng đạo hàm khảo sát hàm số"
+    },
+    {
+      "id": "m12_gen_80",
+      "grade": "12",
+      "topic": "Phương trình mũ & Lôgarit"
+    }
+  ]
+}

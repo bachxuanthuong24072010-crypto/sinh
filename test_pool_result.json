@@ -1,0 +1,40 @@
+{
+  "poolLength": 403,
+  "sampleQuestions": [
+    {
+      "id": "toan12_f1_extra1",
+      "grade": "12",
+      "period": "final1",
+      "topic": "Tọa độ không gian Oxyz",
+      "content": "Trong không gian Oxyz, phương trình mặt cầu có tâm I(1; -2; "
+    },
+    {
+      "id": "m12_gen_53",
+      "grade": "12",
+      "period": "mid2",
+      "topic": "Nguyên hàm & Tích phân",
+      "content": "Tích phân ∫₀¹ (3x + 1) dx có giá trị bằng:"
+    },
+    {
+      "id": "m12_gen_43",
+      "grade": "12",
+      "period": "fin1",
+      "topic": "Tọa độ không gian Oxyz",
+      "content": "Trong không gian Oxyz, phương trình mặt phẳng đi qua gốc tọa"
+    },
+    {
+      "id": "m12_gen_107",
+      "grade": "12",
+      "period": "mid2",
+      "topic": "Nguyên hàm & Tích phân",
+      "content": "Họ nguyên hàm của hàm số f(x) = cos(9x) là:"
+    },
+    {
+      "id": "m12_gen_68",
+      "grade": "12",
+      "period": "fin2",
+      "topic": "Xác suất có điều kiện",
+      "content": "Cho hai biến cố A và B có P(B) = 0.4 và P(A ∩ B) = 0.16. Xác"
+    }
+  ]
+}
